@@ -1,5 +1,9 @@
 # Federal Letter Generator - Project Instructions
 
+## Repository
+
+**GitHub**: https://github.com/dunnston/letter-generator.git
+
 ## Overview
 
 This is a cross-platform desktop application for financial planning professionals to generate engagement letters and batch client letters. Built with Tauri 2.x (Rust backend) + React 18 (TypeScript frontend) + Tailwind CSS.
@@ -206,6 +210,22 @@ Generated letters must follow this exact section order:
 2. Complete tasks in order within each phase
 3. Mark tasks as complete in `DEVELOPMENT.md`
 4. Test functionality before moving to next phase
+
+## Git Workflow
+
+**IMPORTANT**: This repository is already initialized and connected to GitHub.
+
+- **Remote**: `origin` → https://github.com/dunnston/letter-generator.git
+- **Branch**: `main`
+
+**DO NOT**:
+- Run `git init` - the repository already exists
+- Create a new repository - use the existing one
+
+**When committing**:
+1. `git add .` to stage changes
+2. `git commit -m "message"` to commit
+3. `git push origin main` to push
 
 ## Platform Targets
 
