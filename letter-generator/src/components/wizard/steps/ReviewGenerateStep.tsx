@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useWizardStore } from '../../../store/wizardStore';
+import { useTemplateStore } from '../../../store/templateStore';
 import { Button } from '../../common';
 import { WizardStepContent } from '../WizardContainer';
 import { LetterPreview, SectionNav } from '../../common/LetterPreview';
@@ -18,7 +19,8 @@ interface GenerationState {
 }
 
 export function ReviewGenerateStep() {
-  const { data, setStep, markComplete } = useWizardStore();
+  const { data, setStep, markComplete, prevStep } = useWizardStore();
+  const { addRecentDocument } = useTemplateStore();
   const [activeSection, setActiveSection] = useState<string | undefined>();
   const [generationState, setGenerationState] = useState<GenerationState>({
     isGenerating: false,
@@ -107,8 +109,12 @@ export function ReviewGenerateStep() {
 
   const handleGenerate = useCallback(
     async (format: ExportFormat) => {
-      if (!letterData) return;
+      if (!letterData) {
+        console.error('handleGenerate: No letter data available');
+        return;
+      }
 
+      console.log('Starting document generation:', format);
       setGenerationState({
         isGenerating: true,
         format,
@@ -121,15 +127,26 @@ export function ReviewGenerateStep() {
         let filename: string;
 
         if (format === 'docx') {
+          console.log('Generating DOCX...');
           blob = await generateEngagementLetterDocx(letterData);
           filename = generateFilename(letterData, 'docx');
         } else {
+          console.log('Generating PDF...');
           blob = await generateEngagementLetterPdf(letterData);
           filename = generateFilename(letterData, 'pdf');
         }
 
+        console.log('Document generated:', { filename, blobSize: blob.size });
+
         // Download the file
         downloadBlob(blob, filename);
+
+        // Add to recent documents
+        addRecentDocument({
+          name: `${letterData.client.firstName} ${letterData.client.lastName} - Engagement Letter`,
+          type: format,
+          filePath: filename,
+        });
 
         // Mark as complete
         markComplete();
@@ -146,6 +163,7 @@ export function ReviewGenerateStep() {
           setGenerationState((prev) => ({ ...prev, success: false }));
         }, 5000);
       } catch (error) {
+        console.error('Document generation error:', error);
         setGenerationState({
           isGenerating: false,
           format,
@@ -154,7 +172,7 @@ export function ReviewGenerateStep() {
         });
       }
     },
-    [letterData, markComplete]
+    [letterData, markComplete, addRecentDocument]
   );
 
   // Validation check
@@ -393,6 +411,28 @@ export function ReviewGenerateStep() {
               <li>• Both formats contain the same content</li>
             </ul>
           </div>
+
+          {/* Back button */}
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={prevStep}
+          >
+            <svg
+              className="w-4 h-4 mr-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back to Previous Step
+          </Button>
         </div>
       </div>
     </WizardStepContent>

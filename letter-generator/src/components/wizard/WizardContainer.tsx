@@ -13,6 +13,7 @@ export function WizardContainer({ children }: WizardContainerProps) {
 
   const currentStepConfig = WIZARD_STEPS.find((s) => s.step === currentStep);
   const canProceed = getStepValidation(currentStep);
+  const isLastStep = currentStep === WIZARD_STEPS.length;
 
   const handleStepClick = (step: WizardStep) => {
     // Allow going back to any previous step
@@ -54,14 +55,17 @@ export function WizardContainer({ children }: WizardContainerProps) {
         </div>
       </div>
 
-      <WizardNavigation
-        currentStep={currentStep}
-        totalSteps={WIZARD_STEPS.length}
-        canProceed={canProceed}
-        onBack={prevStep}
-        onNext={nextStep}
-        showSave={true}
-      />
+      {/* Hide navigation on last step since ReviewGenerateStep has its own buttons */}
+      {!isLastStep && (
+        <WizardNavigation
+          currentStep={currentStep}
+          totalSteps={WIZARD_STEPS.length}
+          canProceed={canProceed}
+          onBack={prevStep}
+          onNext={nextStep}
+          showSave={true}
+        />
+      )}
     </div>
   );
 }

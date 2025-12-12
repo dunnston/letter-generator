@@ -177,14 +177,31 @@ export async function saveEngagementLetterPdf(
 // ==================== UTILITY FUNCTIONS ====================
 
 export function downloadBlob(blob: Blob, filename: string): void {
+  console.log('downloadBlob called:', { filename, blobSize: blob.size, blobType: blob.type });
+
+  if (!blob || blob.size === 0) {
+    console.error('downloadBlob: Blob is empty or null');
+    throw new Error('Cannot download empty file');
+  }
+
   const url = URL.createObjectURL(blob);
+  console.log('Created object URL:', url);
+
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
+
   document.body.appendChild(a);
+  console.log('Triggering download click for:', filename);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+
+  // Delay cleanup to ensure download starts
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log('Download cleanup complete');
+  }, 100);
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
