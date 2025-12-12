@@ -508,6 +508,166 @@ export interface BatchSettings {
   customDisclaimerText?: string;
 }
 
+// ==================== BATCH PROCESSING TYPES ====================
+
+// Excel Import Types
+export interface ExcelColumn {
+  index: number;
+  header: string;
+  sampleValues: string[]; // First few values for preview
+}
+
+export interface ExcelSheet {
+  name: string;
+  columns: ExcelColumn[];
+  rowCount: number;
+}
+
+export interface ExcelFile {
+  fileName: string;
+  sheets: ExcelSheet[];
+  selectedSheet: string;
+}
+
+// Column Mapping Types
+export interface ColumnMapping {
+  sourceColumn: string; // Excel column header
+  targetField: string; // Field in our data structure
+  transform?: ColumnTransform;
+}
+
+export type ColumnTransform =
+  | 'none'
+  | 'uppercase'
+  | 'lowercase'
+  | 'trim'
+  | 'currency' // Parse as currency
+  | 'percentage' // Parse as percentage
+  | 'date' // Parse as date
+  | 'boolean'; // Parse as boolean (yes/no, true/false, 1/0)
+
+export interface ColumnMappingConfig {
+  letterType: Exclude<LetterType, 'engagement'>;
+  mappings: ColumnMapping[];
+  hasHeaderRow: boolean;
+  startRow: number; // 0-indexed, after header if present
+}
+
+// Required fields for each batch letter type
+export const REQUIRED_FIELDS_BY_TYPE: Record<Exclude<LetterType, 'engagement'>, string[]> = {
+  '1099': ['clientName', 'accountName', 'accountNumber', 'taxForm'],
+  'beneficiary': ['accountOwner', 'accountType', 'accountNumber', 'accountValue', 'beneficiaryName', 'beneficiaryPercentage'],
+  'rmd': ['accountOwner', 'accountName', 'accountNumber', 'amountRequired'],
+  'tax_strategies': ['clientName', 'taxYear', 'priorYearTaxableIncome', 'priorYearTaxBill', 'currentYearTaxableIncome'],
+};
+
+// Field definitions for column mapping UI
+export interface FieldDefinition {
+  key: string;
+  label: string;
+  required: boolean;
+  type: 'string' | 'number' | 'currency' | 'percentage' | 'date' | 'boolean';
+  description?: string;
+}
+
+export const FIELD_DEFINITIONS_1099: FieldDefinition[] = [
+  { key: 'clientName', label: 'Client Name', required: true, type: 'string', description: 'Full name of the client' },
+  { key: 'clientEmail', label: 'Client Email', required: false, type: 'string', description: 'Email address for the client' },
+  { key: 'accountName', label: 'Account Name', required: true, type: 'string', description: 'Name/title of the account' },
+  { key: 'accountNumber', label: 'Account Number', required: true, type: 'string', description: 'Account number (will be masked in letter)' },
+  { key: 'taxForm', label: 'Tax Form', required: true, type: 'string', description: 'Type of tax form (e.g., 1099-DIV, 1099-INT)' },
+  { key: 'specialNotes', label: 'Special Notes', required: false, type: 'string', description: 'Any special notes for this account' },
+];
+
+export const FIELD_DEFINITIONS_BENEFICIARY: FieldDefinition[] = [
+  { key: 'accountOwner', label: 'Account Owner', required: true, type: 'string', description: 'Name of account owner' },
+  { key: 'accountType', label: 'Account Type', required: true, type: 'string', description: 'Type of account (IRA, 401k, etc.)' },
+  { key: 'accountNumber', label: 'Account Number', required: true, type: 'string', description: 'Account number' },
+  { key: 'accountValue', label: 'Account Value', required: true, type: 'currency', description: 'Current account value' },
+  { key: 'beneficiaryName', label: 'Beneficiary Name', required: true, type: 'string', description: 'Name of beneficiary' },
+  { key: 'beneficiaryPercentage', label: 'Beneficiary %', required: true, type: 'percentage', description: 'Percentage allocation' },
+  { key: 'beneficiaryType', label: 'Beneficiary Type', required: false, type: 'string', description: 'Primary or Contingent' },
+  { key: 'perStirpes', label: 'Per Stirpes', required: false, type: 'boolean', description: 'Whether per stirpes applies' },
+];
+
+export const FIELD_DEFINITIONS_RMD: FieldDefinition[] = [
+  { key: 'accountOwner', label: 'Account Owner', required: true, type: 'string', description: 'Name of account owner' },
+  { key: 'accountName', label: 'Account Name', required: true, type: 'string', description: 'Name/title of the account' },
+  { key: 'accountNumber', label: 'Account Number', required: true, type: 'string', description: 'Account number' },
+  { key: 'amountRequired', label: 'RMD Amount Required', required: true, type: 'currency', description: 'Required minimum distribution amount' },
+  { key: 'hasSystematic', label: 'Has Systematic', required: false, type: 'boolean', description: 'Whether systematic withdrawals are set up' },
+  { key: 'yearToDateWithdrawals', label: 'YTD Withdrawals', required: false, type: 'currency', description: 'Year-to-date withdrawals already taken' },
+  { key: 'suggestedWithdrawal', label: 'Suggested Withdrawal', required: false, type: 'currency', description: 'Recommended withdrawal amount' },
+  { key: 'depositLocation', label: 'Deposit Location', required: false, type: 'string', description: 'Where to deposit the withdrawal' },
+  { key: 'federalTax', label: 'Federal Tax Withholding', required: false, type: 'percentage', description: 'Federal tax withholding percentage' },
+  { key: 'stateTax', label: 'State Tax Withholding', required: false, type: 'percentage', description: 'State tax withholding percentage' },
+];
+
+export const FIELD_DEFINITIONS_TAX_STRATEGIES: FieldDefinition[] = [
+  { key: 'clientName', label: 'Client Name', required: true, type: 'string', description: 'Full name of the client' },
+  { key: 'taxYear', label: 'Tax Year', required: true, type: 'number', description: 'Current tax year' },
+  { key: 'priorYearDeduction', label: 'Prior Year Deduction', required: false, type: 'currency', description: 'Prior year deduction amount' },
+  { key: 'priorYearDeductionType', label: 'Prior Year Deduction Type', required: false, type: 'string', description: 'Standard or Itemized' },
+  { key: 'priorYearTaxableIncome', label: 'Prior Year Taxable Income', required: true, type: 'currency', description: 'Prior year taxable income' },
+  { key: 'priorYearTaxBill', label: 'Prior Year Tax Bill', required: true, type: 'currency', description: 'Prior year total tax' },
+  { key: 'priorYearBracket', label: 'Prior Year Tax Bracket', required: false, type: 'percentage', description: 'Prior year marginal tax bracket' },
+  { key: 'currentYearDeduction', label: 'Current Year Deduction', required: false, type: 'currency', description: 'Current year deduction amount' },
+  { key: 'currentYearTaxableIncome', label: 'Current Year Taxable Income', required: true, type: 'currency', description: 'Current year taxable income' },
+  { key: 'currentYearTaxBill', label: 'Current Year Tax Bill', required: false, type: 'currency', description: 'Current year estimated tax' },
+  { key: 'currentYearBracket', label: 'Current Year Tax Bracket', required: false, type: 'percentage', description: 'Current year marginal tax bracket' },
+  { key: 'primaryStrategy', label: 'Primary Strategy', required: false, type: 'string', description: 'Main tax strategy recommendation' },
+  { key: 'strategyDescription', label: 'Strategy Description', required: false, type: 'string', description: 'Detailed strategy explanation' },
+];
+
+// Batch Processing Status
+export type BatchItemStatus = 'pending' | 'processing' | 'success' | 'error' | 'skipped';
+
+export interface BatchItem {
+  id: string;
+  rowNumber: number;
+  data: Record<string, unknown>;
+  status: BatchItemStatus;
+  errorMessage?: string;
+  outputPath?: string;
+}
+
+export interface BatchJob {
+  id: string;
+  letterType: Exclude<LetterType, 'engagement'>;
+  fileName: string;
+  totalItems: number;
+  processedItems: number;
+  successCount: number;
+  errorCount: number;
+  skippedCount: number;
+  status: 'idle' | 'running' | 'paused' | 'completed' | 'cancelled';
+  startedAt?: string;
+  completedAt?: string;
+  items: BatchItem[];
+  settings: BatchSettings;
+  mappingConfig: ColumnMappingConfig;
+}
+
+// Batch Processing Results
+export interface BatchResult {
+  jobId: string;
+  success: boolean;
+  totalProcessed: number;
+  successCount: number;
+  errorCount: number;
+  skippedCount: number;
+  outputDirectory: string;
+  errors: BatchError[];
+  duration: number; // milliseconds
+}
+
+export interface BatchError {
+  rowNumber: number;
+  clientName?: string;
+  field?: string;
+  message: string;
+}
+
 // ==================== CONTENT BLOCK TYPES ====================
 
 export interface ContentBlock {
