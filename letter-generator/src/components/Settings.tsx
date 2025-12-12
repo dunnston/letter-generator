@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { Button, Input, Toggle, Select } from './common';
 import type { GoalCategoryTemplate, GoalSubTopic } from '../types';
+import { DEFAULT_DISCLAIMER_TEXT } from '../types';
 
 const OUTPUT_FORMAT_OPTIONS = [
   { value: 'docx', label: 'Word Document (.docx)' },
@@ -14,6 +15,7 @@ export function Settings() {
     settings,
     updateSettings,
     updateDefaultAdvisor,
+    updateDisclaimer,
     templates,
     deleteTemplate,
     updateGoalCategory,
@@ -22,7 +24,7 @@ export function Settings() {
     resetGoalTemplates,
   } = useTemplateStore();
 
-  const [activeTab, setActiveTab] = useState<'advisor' | 'documents' | 'output' | 'templates' | 'goals'>(
+  const [activeTab, setActiveTab] = useState<'advisor' | 'documents' | 'output' | 'templates' | 'goals' | 'disclaimer'>(
     'advisor'
   );
   const [expandedGoalCategory, setExpandedGoalCategory] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export function Settings() {
     { id: 'goals' as const, label: 'Goal Templates' },
     { id: 'documents' as const, label: 'Document Defaults' },
     { id: 'output' as const, label: 'Output Settings' },
+    { id: 'disclaimer' as const, label: 'Disclaimer' },
     { id: 'templates' as const, label: 'Saved Templates' },
   ];
 
@@ -618,6 +621,72 @@ export function Settings() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'disclaimer' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-primary-800 mb-4">
+                  Letter Disclaimer
+                </h3>
+                <p className="text-sm text-primary-500 mb-6">
+                  Configure an optional disclaimer that will appear at the bottom of all engagement letters, after the signature block.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <Toggle
+                  label="Include disclaimer in letters"
+                  description="When enabled, the disclaimer text below will be added to the end of all generated letters"
+                  checked={settings.disclaimer?.includeDisclaimer ?? false}
+                  onChange={(e) => updateDisclaimer({ includeDisclaimer: e.target.checked })}
+                />
+
+                <div className={settings.disclaimer?.includeDisclaimer ? '' : 'opacity-50'}>
+                  <label className="block text-sm font-medium text-primary-700 mb-2">
+                    Disclaimer Text
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent resize-y min-h-[120px] text-sm"
+                    value={settings.disclaimer?.disclaimerText ?? DEFAULT_DISCLAIMER_TEXT}
+                    onChange={(e) => updateDisclaimer({ disclaimerText: e.target.value })}
+                    placeholder="Enter disclaimer text..."
+                    disabled={!settings.disclaimer?.includeDisclaimer}
+                  />
+                  <p className="text-xs text-primary-500 mt-1">
+                    This text will appear in a smaller font at the bottom of the letter.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-primary-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          'Reset disclaimer to default text?'
+                        )
+                      ) {
+                        updateDisclaimer({ disclaimerText: DEFAULT_DISCLAIMER_TEXT });
+                      }
+                    }}
+                    className="text-sm text-secondary-600 hover:text-secondary-700"
+                    disabled={!settings.disclaimer?.includeDisclaimer}
+                  >
+                    Reset to default text
+                  </button>
+                </div>
+
+                {settings.disclaimer?.includeDisclaimer && (
+                  <div className="mt-6 p-4 bg-primary-50 rounded-lg">
+                    <p className="text-xs text-primary-500 mb-2 font-medium">Preview:</p>
+                    <p className="text-xs text-primary-600 italic">
+                      {settings.disclaimer?.disclaimerText || DEFAULT_DISCLAIMER_TEXT}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

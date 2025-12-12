@@ -20,7 +20,7 @@ interface GenerationState {
 
 export function ReviewGenerateStep() {
   const { data, setStep, markComplete, prevStep } = useWizardStore();
-  const { addRecentDocument } = useTemplateStore();
+  const { addRecentDocument, settings } = useTemplateStore();
   const [activeSection, setActiveSection] = useState<string | undefined>();
   const [generationState, setGenerationState] = useState<GenerationState>({
     isGenerating: false,
@@ -128,11 +128,11 @@ export function ReviewGenerateStep() {
 
         if (format === 'docx') {
           console.log('Generating DOCX...');
-          blob = await generateEngagementLetterDocx(letterData);
+          blob = await generateEngagementLetterDocx(letterData, settings.disclaimer);
           filename = generateFilename(letterData, 'docx');
         } else {
           console.log('Generating PDF...');
-          blob = await generateEngagementLetterPdf(letterData);
+          blob = await generateEngagementLetterPdf(letterData, settings.disclaimer);
           filename = generateFilename(letterData, 'pdf');
         }
 

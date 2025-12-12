@@ -18,6 +18,7 @@ import type {
   AdditionalSections,
   AdvisorInfo,
   DeliveryMethod,
+  DisclaimerSettings,
 } from '../types';
 import {
   DEFAULT_CFP_LANGUAGE,
@@ -624,6 +625,13 @@ export function generateSignatureBlock(advisor: AdvisorInfo): string {
   return parts.join('\n');
 }
 
+export function generateDisclaimer(disclaimer: DisclaimerSettings | undefined): string {
+  if (!disclaimer?.includeDisclaimer || !disclaimer.disclaimerText) {
+    return '';
+  }
+  return disclaimer.disclaimerText;
+}
+
 // ==================== FULL LETTER GENERATOR ====================
 
 export interface LetterSection {
@@ -634,7 +642,10 @@ export interface LetterSection {
   isEmpty: boolean;
 }
 
-export function generateLetterSections(data: EngagementLetterData): LetterSection[] {
+export function generateLetterSections(
+  data: EngagementLetterData,
+  disclaimer?: DisclaimerSettings
+): LetterSection[] {
   const sections: LetterSection[] = [];
 
   // Header
@@ -896,6 +907,18 @@ export function generateLetterSections(data: EngagementLetterData): LetterSectio
     isOptional: false,
     isEmpty: false,
   });
+
+  // Disclaimer (after signature)
+  const disclaimerContent = generateDisclaimer(disclaimer);
+  if (disclaimerContent) {
+    sections.push({
+      id: 'disclaimer',
+      title: 'Disclaimer',
+      content: disclaimerContent,
+      isOptional: true,
+      isEmpty: false,
+    });
+  }
 
   return sections;
 }

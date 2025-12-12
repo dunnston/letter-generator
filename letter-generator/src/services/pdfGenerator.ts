@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { EngagementLetterData } from '../types';
+import type { EngagementLetterData, DisclaimerSettings } from '../types';
 import { generateLetterSections } from './templateEngine';
 import { generateFilename } from './documentGenerator';
 
@@ -16,6 +16,7 @@ const PDF_CONFIG = {
     normal: 11,
     heading: 12,
     sectionHeader: 11,
+    disclaimer: 8,
   },
   lineHeight: 1.4,
   fontFamily: 'helvetica',
@@ -192,9 +193,46 @@ function renderSignatureSection(ctx: PDFContext, content: string): void {
   });
 }
 
+function renderDisclaimerSection(ctx: PDFContext, content: string): void {
+  // Add some space before disclaimer
+  addEmptyLine(ctx, 20);
+
+  // Draw a subtle horizontal line
+  ctx.doc.setDrawColor(153, 153, 153); // Gray color
+  ctx.doc.setLineWidth(0.5);
+  ctx.doc.line(ctx.marginLeft, ctx.y, ctx.marginLeft + ctx.contentWidth, ctx.y);
+  ctx.y += 10;
+
+  // Set color to gray for disclaimer text
+  ctx.doc.setTextColor(102, 102, 102);
+
+  // Render disclaimer text in smaller, italic font
+  const paragraphs = content.split('\n\n');
+  paragraphs.forEach((para) => {
+    if (para.trim()) {
+      ctx.doc.setFontSize(PDF_CONFIG.fontSize.disclaimer);
+      ctx.doc.setFont(PDF_CONFIG.fontFamily, 'italic');
+
+      const lines = ctx.doc.splitTextToSize(para.trim(), ctx.contentWidth);
+      lines.forEach((line: string) => {
+        checkPageBreak(ctx, PDF_CONFIG.fontSize.disclaimer * PDF_CONFIG.lineHeight);
+        ctx.doc.text(line, ctx.marginLeft, ctx.y);
+        ctx.y += PDF_CONFIG.fontSize.disclaimer * PDF_CONFIG.lineHeight;
+      });
+      ctx.y += 4;
+    }
+  });
+
+  // Reset text color to black
+  ctx.doc.setTextColor(0, 0, 0);
+}
+
 // ==================== MAIN PDF GENERATOR ====================
 
-export async function generateEngagementLetterPdf(data: EngagementLetterData): Promise<Blob> {
+export async function generateEngagementLetterPdf(
+  data: EngagementLetterData,
+  disclaimer?: DisclaimerSettings
+): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'pt',
@@ -202,7 +240,7 @@ export async function generateEngagementLetterPdf(data: EngagementLetterData): P
   });
 
   const ctx = createContext(doc);
-  const sections = generateLetterSections(data);
+  const sections = generateLetterSections(data, disclaimer);
 
   sections.forEach((section) => {
     if (section.isEmpty) return;
@@ -211,6 +249,8 @@ export async function generateEngagementLetterPdf(data: EngagementLetterData): P
       renderHeaderSection(ctx, section.content);
     } else if (section.id === 'signature') {
       renderSignatureSection(ctx, section.content);
+    } else if (section.id === 'disclaimer') {
+      renderDisclaimerSection(ctx, section.content);
     } else if (section.id.endsWith('_header')) {
       renderBodySection(ctx, section.content, true);
     } else {
@@ -221,7 +261,10 @@ export async function generateEngagementLetterPdf(data: EngagementLetterData): P
   return doc.output('blob');
 }
 
-export async function generateEngagementLetterPdfDataUri(data: EngagementLetterData): Promise<string> {
+export async function generateEngagementLetterPdfDataUri(
+  data: EngagementLetterData,
+  disclaimer?: DisclaimerSettings
+): Promise<string> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'pt',
@@ -229,7 +272,7 @@ export async function generateEngagementLetterPdfDataUri(data: EngagementLetterD
   });
 
   const ctx = createContext(doc);
-  const sections = generateLetterSections(data);
+  const sections = generateLetterSections(data, disclaimer);
 
   sections.forEach((section) => {
     if (section.isEmpty) return;
@@ -238,6 +281,8 @@ export async function generateEngagementLetterPdfDataUri(data: EngagementLetterD
       renderHeaderSection(ctx, section.content);
     } else if (section.id === 'signature') {
       renderSignatureSection(ctx, section.content);
+    } else if (section.id === 'disclaimer') {
+      renderDisclaimerSection(ctx, section.content);
     } else if (section.id.endsWith('_header')) {
       renderBodySection(ctx, section.content, true);
     } else {

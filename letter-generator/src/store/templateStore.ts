@@ -5,8 +5,9 @@ import type {
   EngagementLetterData,
   AdvisorInfo,
   GoalCategoryTemplate,
+  DisclaimerSettings,
 } from '../types';
-import { DEFAULT_GOAL_TEMPLATES } from '../types';
+import { DEFAULT_GOAL_TEMPLATES, DEFAULT_DISCLAIMER_TEXT } from '../types';
 
 interface AppSettings {
   // Default advisor info (pre-fills wizard)
@@ -23,6 +24,9 @@ interface AppSettings {
 
   // Goal templates - customizable categories and sub-topics
   goalTemplates: GoalCategoryTemplate[];
+
+  // Disclaimer settings
+  disclaimer: DisclaimerSettings;
 }
 
 const defaultSettings: AppSettings = {
@@ -33,6 +37,10 @@ const defaultSettings: AppSettings = {
   autoSaveEnabled: true,
   showPreviewPane: true,
   goalTemplates: [...DEFAULT_GOAL_TEMPLATES],
+  disclaimer: {
+    includeDisclaimer: false,
+    disclaimerText: DEFAULT_DISCLAIMER_TEXT,
+  },
 };
 
 interface TemplateStore {
@@ -70,6 +78,7 @@ interface TemplateStore {
   // Settings actions
   updateSettings: (updates: Partial<AppSettings>) => void;
   updateDefaultAdvisor: (advisor: Partial<AdvisorInfo>) => void;
+  updateDisclaimer: (disclaimer: Partial<DisclaimerSettings>) => void;
 
   // Goal template actions
   updateGoalTemplates: (templates: GoalCategoryTemplate[]) => void;
@@ -171,6 +180,14 @@ export const useTemplateStore = create<TemplateStore>()(
           settings: {
             ...state.settings,
             defaultAdvisor: { ...state.settings.defaultAdvisor, ...advisor },
+          },
+        })),
+
+      updateDisclaimer: (disclaimer) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            disclaimer: { ...state.settings.disclaimer, ...disclaimer },
           },
         })),
 

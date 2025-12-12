@@ -373,6 +373,15 @@ export interface AdvisorInfo {
   firmName: string;
 }
 
+// Disclaimer Settings
+export interface DisclaimerSettings {
+  includeDisclaimer: boolean;
+  disclaimerText: string;
+}
+
+// Default disclaimer text
+export const DEFAULT_DISCLAIMER_TEXT = `This letter is intended to document our engagement and does not constitute a contract. The services described herein are subject to applicable laws, regulations, and firm policies. Past performance is not indicative of future results. Investment involves risk, including the possible loss of principal.`;
+
 // Complete Engagement Letter Data
 export interface EngagementLetterData {
   client: ClientInfo;

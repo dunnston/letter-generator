@@ -6,7 +6,7 @@ import {
   AlignmentType,
   convertInchesToTwip,
 } from 'docx';
-import type { EngagementLetterData } from '../types';
+import type { EngagementLetterData, DisclaimerSettings } from '../types';
 import { generateLetterSections } from './templateEngine';
 
 // ==================== DOCX STYLING CONSTANTS ====================
@@ -14,6 +14,7 @@ import { generateLetterSections } from './templateEngine';
 const FONT_FAMILY = 'Arial';
 const FONT_SIZE_NORMAL = 24; // 12pt in half-points
 const FONT_SIZE_SECTION = 26; // 13pt
+const FONT_SIZE_DISCLAIMER = 18; // 9pt in half-points
 
 const PAGE_MARGINS = {
   top: convertInchesToTwip(1),
@@ -272,10 +273,59 @@ function convertSignatureSection(content: string): Paragraph[] {
   return paragraphs;
 }
 
+function convertDisclaimerSection(content: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+
+  // Add some space before the disclaimer
+  paragraphs.push(createEmptyParagraph());
+
+  // Add a horizontal line effect with underscores or just space
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '─'.repeat(50),
+          font: FONT_FAMILY,
+          size: FONT_SIZE_DISCLAIMER,
+          color: '999999',
+        }),
+      ],
+      spacing: { before: 400, after: 200 },
+    })
+  );
+
+  // Split content into paragraphs (in case there are multiple)
+  const contentParagraphs = content.split('\n\n');
+
+  contentParagraphs.forEach((para) => {
+    if (para.trim()) {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: para.trim(),
+              font: FONT_FAMILY,
+              size: FONT_SIZE_DISCLAIMER,
+              italics: true,
+              color: '666666',
+            }),
+          ],
+          spacing: { after: 100 },
+        })
+      );
+    }
+  });
+
+  return paragraphs;
+}
+
 // ==================== MAIN DOCUMENT GENERATOR ====================
 
-export async function generateEngagementLetterDocx(data: EngagementLetterData): Promise<Blob> {
-  const sections = generateLetterSections(data);
+export async function generateEngagementLetterDocx(
+  data: EngagementLetterData,
+  disclaimer?: DisclaimerSettings
+): Promise<Blob> {
+  const sections = generateLetterSections(data, disclaimer);
   const documentParagraphs: Paragraph[] = [];
 
   sections.forEach((section) => {
@@ -286,6 +336,8 @@ export async function generateEngagementLetterDocx(data: EngagementLetterData): 
       documentParagraphs.push(...convertHeaderSection(section.content));
     } else if (section.id === 'signature') {
       documentParagraphs.push(...convertSignatureSection(section.content));
+    } else if (section.id === 'disclaimer') {
+      documentParagraphs.push(...convertDisclaimerSection(section.content));
     } else if (section.id.endsWith('_header')) {
       documentParagraphs.push(...convertBodySection(section.content, true));
     } else {
@@ -340,8 +392,11 @@ export async function generateEngagementLetterDocx(data: EngagementLetterData): 
   return blob;
 }
 
-export async function generateEngagementLetterBuffer(data: EngagementLetterData): Promise<Buffer> {
-  const sections = generateLetterSections(data);
+export async function generateEngagementLetterBuffer(
+  data: EngagementLetterData,
+  disclaimer?: DisclaimerSettings
+): Promise<Buffer> {
+  const sections = generateLetterSections(data, disclaimer);
   const documentParagraphs: Paragraph[] = [];
 
   sections.forEach((section) => {
@@ -351,6 +406,8 @@ export async function generateEngagementLetterBuffer(data: EngagementLetterData)
       documentParagraphs.push(...convertHeaderSection(section.content));
     } else if (section.id === 'signature') {
       documentParagraphs.push(...convertSignatureSection(section.content));
+    } else if (section.id === 'disclaimer') {
+      documentParagraphs.push(...convertDisclaimerSection(section.content));
     } else if (section.id.endsWith('_header')) {
       documentParagraphs.push(...convertBodySection(section.content, true));
     } else {
