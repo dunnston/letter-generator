@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWizardStore } from '../../../store/wizardStore';
+import { useTemplateStore } from '../../../store/templateStore';
 import { Button, Input, Select, Toggle, TextArea } from '../../common';
 import { WizardStepContent, WizardStepSection } from '../WizardContainer';
 import type {
@@ -19,6 +20,7 @@ const PRIVACY_OPTIONS = [
   { value: 'enclosed', label: 'Enclosed separately' },
   { value: 'separate', label: 'Will be delivered separately' },
   { value: 'previously_provided', label: 'Previously provided to client' },
+  { value: 'link', label: 'Available at a link' },
 ];
 
 const DEFAULT_RESPONSIBILITIES = [
@@ -31,11 +33,25 @@ const DEFAULT_RESPONSIBILITIES = [
 ];
 
 export function AdditionalSectionsStep() {
-  const { data, updateAdditional, updateAdvisor } = useWizardStore();
+  const { data, updateAdditional, updateAdvisor, applyAdvisorDefaults } = useWizardStore();
+  const { settings } = useTemplateStore();
   const additional = data.additional || ({} as AdditionalSections);
   const advisor = data.advisor || ({} as AdvisorInfo);
 
   const [newResponsibility, setNewResponsibility] = useState('');
+
+  // Auto-populate advisor info from settings if fields are empty
+  useEffect(() => {
+    const defaultAdvisor = settings.defaultAdvisor;
+    if (defaultAdvisor && Object.keys(defaultAdvisor).length > 0) {
+      // Only apply if at least one advisor field is empty
+      const hasEmptyFields =
+        !advisor.name || !advisor.email || !advisor.firmName;
+      if (hasEmptyFields) {
+        applyAdvisorDefaults(defaultAdvisor);
+      }
+    }
+  }, []); // Run only once on mount
 
   // Client Responsibilities Handlers
   const handleAddResponsibility = () => {
@@ -92,11 +108,12 @@ export function AdditionalSectionsStep() {
       parts.push(`Notice period: ${additional.terminationNotice}`);
     }
 
-    parts.push(
-      `Privacy Policy: ${
-        PRIVACY_OPTIONS.find((o) => o.value === additional.privacyPolicyDelivery)?.label || 'N/A'
-      }`
-    );
+    const privacyLabel = PRIVACY_OPTIONS.find((o) => o.value === additional.privacyPolicyDelivery)?.label || 'N/A';
+    if (additional.privacyPolicyDelivery === 'link' && additional.privacyPolicyLink) {
+      parts.push(`Privacy Policy: ${privacyLabel} (${additional.privacyPolicyLink})`);
+    } else {
+      parts.push(`Privacy Policy: ${privacyLabel}`);
+    }
 
     if (additional.hasDisciplinaryHistory) {
       parts.push(`\nDisciplinary History: Yes`);
@@ -221,12 +238,23 @@ export function AdditionalSectionsStep() {
           title="Privacy Policy Delivery"
           description="How the privacy policy will be provided to the client."
         >
-          <Select
-            label="Privacy Policy Delivery Method"
-            options={PRIVACY_OPTIONS}
-            value={additional.privacyPolicyDelivery || 'included'}
-            onChange={(e) => handlePrivacyChange(e.target.value as PrivacyPolicyDelivery)}
-          />
+          <div className="space-y-4">
+            <Select
+              label="Privacy Policy Delivery Method"
+              options={PRIVACY_OPTIONS}
+              value={additional.privacyPolicyDelivery || 'included'}
+              onChange={(e) => handlePrivacyChange(e.target.value as PrivacyPolicyDelivery)}
+            />
+            {additional.privacyPolicyDelivery === 'link' && (
+              <Input
+                label="Privacy Policy URL"
+                type="url"
+                value={additional.privacyPolicyLink || ''}
+                onChange={(e) => updateAdditional({ privacyPolicyLink: e.target.value })}
+                placeholder="https://yourfirm.com/privacy-policy"
+              />
+            )}
+          </div>
         </WizardStepSection>
 
         {/* Disciplinary History */}

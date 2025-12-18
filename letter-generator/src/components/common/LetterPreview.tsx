@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { EngagementLetterData } from '../../types';
+import type { EngagementLetterData, DisclaimerSettings } from '../../types';
 import { generateLetterSections, type LetterSection } from '../../services/templateEngine';
 
 // ==================== SECTION RENDERER ====================
@@ -131,10 +131,11 @@ interface LetterPreviewProps {
   data: EngagementLetterData;
   onEditSection?: (sectionId: string) => void;
   className?: string;
+  disclaimer?: DisclaimerSettings;
 }
 
-export function LetterPreview({ data, onEditSection, className = '' }: LetterPreviewProps) {
-  const sections = useMemo(() => generateLetterSections(data), [data]);
+export function LetterPreview({ data, onEditSection, className = '', disclaimer }: LetterPreviewProps) {
+  const sections = useMemo(() => generateLetterSections(data, disclaimer), [data, disclaimer]);
 
   return (
     <div
@@ -168,10 +169,11 @@ export function LetterPreview({ data, onEditSection, className = '' }: LetterPre
 interface MiniPreviewProps {
   data: EngagementLetterData;
   className?: string;
+  disclaimer?: DisclaimerSettings;
 }
 
-export function MiniLetterPreview({ data, className = '' }: MiniPreviewProps) {
-  const sections = useMemo(() => generateLetterSections(data), [data]);
+export function MiniLetterPreview({ data, className = '', disclaimer }: MiniPreviewProps) {
+  const sections = useMemo(() => generateLetterSections(data, disclaimer), [data, disclaimer]);
 
   return (
     <div
@@ -209,12 +211,13 @@ interface SectionNavProps {
   data: EngagementLetterData;
   activeSection?: string;
   onSectionClick: (sectionId: string) => void;
+  disclaimer?: DisclaimerSettings;
 }
 
-export function SectionNav({ data, activeSection, onSectionClick }: SectionNavProps) {
+export function SectionNav({ data, activeSection, onSectionClick, disclaimer }: SectionNavProps) {
   const sections = useMemo(
-    () => generateLetterSections(data).filter((s) => !s.isEmpty && !s.id.endsWith('_header')),
-    [data]
+    () => generateLetterSections(data, disclaimer).filter((s) => !s.isEmpty && !s.id.endsWith('_header')),
+    [data, disclaimer]
   );
 
   return (

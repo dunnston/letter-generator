@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { Button, Input, Toggle, Select } from './common';
-import type { GoalCategoryTemplate, GoalSubTopic } from '../types';
+import type { GoalCategoryTemplate, GoalSubTopic, EngagementTermination, PrivacyPolicyDelivery } from '../types';
 import { DEFAULT_DISCLAIMER_TEXT } from '../types';
+import { STANDARD_CONFLICTS } from '../templates/engagement/conflictTemplates';
 
 const OUTPUT_FORMAT_OPTIONS = [
   { value: 'docx', label: 'Word Document (.docx)' },
   { value: 'pdf', label: 'PDF Document (.pdf)' },
   { value: 'both', label: 'Both Formats' },
+];
+
+const TERMINATION_OPTIONS = [
+  { value: 'ongoing_until_terminated', label: 'Ongoing until terminated by either party' },
+  { value: 'fixed_term', label: 'Fixed term engagement' },
+];
+
+const PRIVACY_POLICY_OPTIONS = [
+  { value: 'included', label: 'Included with this letter' },
+  { value: 'enclosed', label: 'Enclosed with this letter' },
+  { value: 'separate', label: 'Provided separately' },
+  { value: 'previously_provided', label: 'Previously provided' },
+  { value: 'link', label: 'Available at a link' },
 ];
 
 export function Settings() {
@@ -16,15 +30,14 @@ export function Settings() {
     updateSettings,
     updateDefaultAdvisor,
     updateDisclaimer,
-    templates,
-    deleteTemplate,
+    updateEngagementDefaults,
     updateGoalCategory,
     addGoalCategory,
     deleteGoalCategory,
     resetGoalTemplates,
   } = useTemplateStore();
 
-  const [activeTab, setActiveTab] = useState<'advisor' | 'documents' | 'output' | 'templates' | 'goals' | 'disclaimer'>(
+  const [activeTab, setActiveTab] = useState<'advisor' | 'defaults' | 'documents' | 'output' | 'goals' | 'disclaimer'>(
     'advisor'
   );
   const [expandedGoalCategory, setExpandedGoalCategory] = useState<string | null>(null);
@@ -63,12 +76,6 @@ export function Settings() {
     setHasChanges(false);
     setSaveMessage('Settings saved successfully!');
     setTimeout(() => setSaveMessage(null), 3000);
-  };
-
-  const handleDeleteTemplate = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete the template "${name}"?`)) {
-      deleteTemplate(id);
-    }
   };
 
   // Goal template handlers
@@ -127,11 +134,11 @@ export function Settings() {
 
   const tabs = [
     { id: 'advisor' as const, label: 'Advisor Info' },
+    { id: 'defaults' as const, label: 'Wizard Defaults' },
     { id: 'goals' as const, label: 'Goal Templates' },
     { id: 'documents' as const, label: 'Document Defaults' },
     { id: 'output' as const, label: 'Output Settings' },
     { id: 'disclaimer' as const, label: 'Disclaimer' },
-    { id: 'templates' as const, label: 'Saved Templates' },
   ];
 
   return (
@@ -207,6 +214,203 @@ export function Settings() {
                   placeholder="Your firm name"
                   className="md:col-span-2"
                 />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'defaults' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-primary-800 mb-4">
+                  Wizard Defaults
+                </h3>
+                <p className="text-sm text-primary-500 mb-6">
+                  Pre-select options that are commonly used when creating engagement letters.
+                  These defaults will be applied when starting a new letter.
+                </p>
+              </div>
+
+              {/* Professional Disclosure Toggles */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary-700 border-b border-primary-200 pb-2">
+                  Professional Disclosures
+                </h4>
+                <Toggle
+                  label="RIA Fiduciary Disclosure"
+                  description="Include RIA fiduciary standard language by default"
+                  checked={settings.engagementDefaults?.includeRIADisclosure ?? false}
+                  onChange={(e) => updateEngagementDefaults({ includeRIADisclosure: e.target.checked })}
+                />
+                <Toggle
+                  label="CFP® Fiduciary Disclosure"
+                  description="Include CFP Board fiduciary language by default"
+                  checked={settings.engagementDefaults?.includeCFPDisclosure ?? false}
+                  onChange={(e) => updateEngagementDefaults({ includeCFPDisclosure: e.target.checked })}
+                />
+                <Toggle
+                  label="ChFC® Professional Disclosure"
+                  description="Include ChFC professional language by default"
+                  checked={settings.engagementDefaults?.includeChFCDisclosure ?? false}
+                  onChange={(e) => updateEngagementDefaults({ includeChFCDisclosure: e.target.checked })}
+                />
+              </div>
+
+              {/* Primary Compensation Sources */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary-700 border-b border-primary-200 pb-2">
+                  Primary Compensation Sources
+                </h4>
+                <Toggle
+                  label="Financial Planning Fees"
+                  description="Compensation from financial planning fees paid by client"
+                  checked={settings.engagementDefaults?.paidFromPlanningFees ?? true}
+                  onChange={(e) => updateEngagementDefaults({ paidFromPlanningFees: e.target.checked })}
+                />
+                <Toggle
+                  label="Investment Advisory Fees"
+                  description="Compensation from asset-based advisory fees"
+                  checked={settings.engagementDefaults?.paidFromAdvisoryFees ?? false}
+                  onChange={(e) => updateEngagementDefaults({ paidFromAdvisoryFees: e.target.checked })}
+                />
+                <Toggle
+                  label="Brokerage Commissions"
+                  description="Commissions on securities transactions"
+                  checked={settings.engagementDefaults?.paidFromCommissions ?? false}
+                  onChange={(e) => updateEngagementDefaults({ paidFromCommissions: e.target.checked })}
+                />
+                <Toggle
+                  label="Insurance Commissions"
+                  description="Commissions on insurance products sold"
+                  checked={settings.engagementDefaults?.paidFromInsuranceCommissions ?? false}
+                  onChange={(e) => updateEngagementDefaults({ paidFromInsuranceCommissions: e.target.checked })}
+                />
+              </div>
+
+              {/* Default Conflicts */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary-700 border-b border-primary-200 pb-2">
+                  Default Conflicts to Include
+                </h4>
+                <p className="text-xs text-primary-500 mb-2">
+                  Select conflicts that should be automatically added when creating a new engagement letter.
+                </p>
+                <div className="space-y-2 max-h-60 overflow-y-auto border border-primary-200 rounded-lg p-3">
+                  {STANDARD_CONFLICTS.map((conflict) => (
+                    <label
+                      key={conflict.id}
+                      className="flex items-start gap-3 p-2 rounded hover:bg-primary-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={settings.engagementDefaults?.defaultConflictIds?.includes(conflict.id) ?? false}
+                        onChange={(e) => {
+                          const currentIds = settings.engagementDefaults?.defaultConflictIds ?? [];
+                          if (e.target.checked) {
+                            updateEngagementDefaults({
+                              defaultConflictIds: [...currentIds, conflict.id],
+                            });
+                          } else {
+                            updateEngagementDefaults({
+                              defaultConflictIds: currentIds.filter((id) => id !== conflict.id),
+                            });
+                          }
+                        }}
+                        className="mt-1 h-4 w-4 rounded border-primary-300 text-secondary-600 focus:ring-secondary-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-primary-800">{conflict.title}</span>
+                        <p className="text-xs text-primary-500">{conflict.description}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <Toggle
+                  label="Include Mitigation Strategies"
+                  description="Add mitigation language after listing conflicts"
+                  checked={settings.engagementDefaults?.includeMitigations ?? true}
+                  onChange={(e) => updateEngagementDefaults({ includeMitigations: e.target.checked })}
+                />
+              </div>
+
+              {/* Engagement & Termination */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary-700 border-b border-primary-200 pb-2">
+                  Engagement & Additional Sections
+                </h4>
+                <Select
+                  label="Default Engagement Termination"
+                  options={TERMINATION_OPTIONS}
+                  value={settings.engagementDefaults?.engagementTermination ?? 'fixed_term'}
+                  onChange={(e) =>
+                    updateEngagementDefaults({
+                      engagementTermination: e.target.value as EngagementTermination,
+                    })
+                  }
+                />
+                <Toggle
+                  label="Always Add Standard Responsibilities"
+                  description="Pre-populate the 6 standard client responsibilities when starting a new letter"
+                  checked={settings.engagementDefaults?.includeClientResponsibilities ?? true}
+                  onChange={(e) => updateEngagementDefaults({ includeClientResponsibilities: e.target.checked })}
+                />
+                <Toggle
+                  label="Include Clean Record Statement"
+                  description="Add statement about no material disciplinary events"
+                  checked={settings.engagementDefaults?.includeCleanRecord ?? true}
+                  onChange={(e) => updateEngagementDefaults({ includeCleanRecord: e.target.checked })}
+                />
+              </div>
+
+              {/* Privacy Policy */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary-700 border-b border-primary-200 pb-2">
+                  Privacy Policy
+                </h4>
+                <Select
+                  label="Default Privacy Policy Delivery"
+                  options={PRIVACY_POLICY_OPTIONS}
+                  value={settings.engagementDefaults?.defaultPrivacyPolicyDelivery ?? 'included'}
+                  onChange={(e) =>
+                    updateEngagementDefaults({
+                      defaultPrivacyPolicyDelivery: e.target.value as PrivacyPolicyDelivery,
+                    })
+                  }
+                />
+                {settings.engagementDefaults?.defaultPrivacyPolicyDelivery === 'link' && (
+                  <Input
+                    label="Privacy Policy URL"
+                    type="url"
+                    value={settings.engagementDefaults?.defaultPrivacyPolicyLink ?? ''}
+                    onChange={(e) => updateEngagementDefaults({ defaultPrivacyPolicyLink: e.target.value })}
+                    placeholder="https://yourfirm.com/privacy-policy"
+                  />
+                )}
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <svg
+                    className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-medium text-secondary-800">About Wizard Defaults</h4>
+                    <p className="text-sm text-secondary-700 mt-1">
+                      These defaults will be applied when you start a new engagement letter or reset the wizard.
+                      You can always change them during the wizard process for each individual letter.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -543,84 +747,6 @@ export function Settings() {
                   Reset to default templates
                 </button>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'templates' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-primary-800 mb-4">Saved Templates</h3>
-                <p className="text-sm text-primary-500 mb-6">
-                  Manage your saved letter templates.
-                </p>
-              </div>
-
-              {templates.length === 0 ? (
-                <div className="text-center py-12 bg-primary-50 rounded-lg">
-                  <svg
-                    className="w-12 h-12 mx-auto text-primary-400 mb-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <p className="text-primary-600 font-medium">No saved templates yet</p>
-                  <p className="text-sm text-primary-500 mt-1">
-                    Templates you save from the wizard will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className="flex items-center justify-between p-4 bg-primary-50 rounded-lg"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-primary-800">{template.name}</span>
-                          {template.isDefault && (
-                            <span className="px-2 py-0.5 bg-secondary-100 text-secondary-700 text-xs rounded-full">
-                              Default
-                            </span>
-                          )}
-                          {template.isFavorite && (
-                            <svg
-                              className="w-4 h-4 text-yellow-500"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          )}
-                        </div>
-                        <p className="text-sm text-primary-500 mt-1">
-                          Created: {new Date(template.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="secondary">
-                          Use Template
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDeleteTemplate(template.id, template.name)}
-                          className="text-error-600 hover:bg-error-50"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 

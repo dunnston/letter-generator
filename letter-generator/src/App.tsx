@@ -65,8 +65,8 @@ const ClockIcon = () => (
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
-  const { currentStep, resetWizard, lastSaved, data } = useWizardStore();
-  const { recentDocuments } = useTemplateStore();
+  const { currentStep, resetWizard, resetWizardWithDefaults, lastSaved, data } = useWizardStore();
+  const { recentDocuments, settings } = useTemplateStore();
   const [showResumePrompt, setShowResumePrompt] = useState(false);
 
   // Check for existing draft on mount
@@ -77,7 +77,12 @@ function App() {
   }, []);
 
   const startNewEngagementLetter = () => {
-    resetWizard();
+    // Apply defaults from settings when starting a new letter
+    if (settings.engagementDefaults) {
+      resetWizardWithDefaults(settings.engagementDefaults, settings.defaultAdvisor);
+    } else {
+      resetWizard();
+    }
     setCurrentView('engagement-wizard');
     setShowResumePrompt(false);
   };

@@ -247,6 +247,7 @@ export function ReviewGenerateStep() {
             data={letterData}
             activeSection={activeSection}
             onSectionClick={handleSectionClick}
+            disclaimer={settings.disclaimer}
           />
 
           {/* Validation issues */}
@@ -269,6 +270,7 @@ export function ReviewGenerateStep() {
               data={letterData}
               onEditSection={handleEditSection}
               className="h-full"
+              disclaimer={settings.disclaimer}
             />
           </div>
         </div>

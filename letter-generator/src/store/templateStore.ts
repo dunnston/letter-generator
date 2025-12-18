@@ -6,6 +6,7 @@ import type {
   AdvisorInfo,
   GoalCategoryTemplate,
   DisclaimerSettings,
+  EngagementDefaults,
 } from '../types';
 import { DEFAULT_GOAL_TEMPLATES, DEFAULT_DISCLAIMER_TEXT } from '../types';
 
@@ -27,7 +28,27 @@ interface AppSettings {
 
   // Disclaimer settings
   disclaimer: DisclaimerSettings;
+
+  // Engagement letter defaults
+  engagementDefaults: EngagementDefaults;
 }
+
+const defaultEngagementDefaults: EngagementDefaults = {
+  includeRIADisclosure: false,
+  includeCFPDisclosure: false,
+  includeChFCDisclosure: false,
+  paidFromPlanningFees: true,
+  paidFromAdvisoryFees: false,
+  paidFromCommissions: false,
+  paidFromInsuranceCommissions: false,
+  defaultConflictIds: [],
+  includeMitigations: true,
+  engagementTermination: 'fixed_term',
+  includeClientResponsibilities: true,
+  includeCleanRecord: true,
+  defaultPrivacyPolicyDelivery: 'included',
+  defaultPrivacyPolicyLink: '',
+};
 
 const defaultSettings: AppSettings = {
   defaultAdvisor: {},
@@ -41,6 +62,7 @@ const defaultSettings: AppSettings = {
     includeDisclaimer: false,
     disclaimerText: DEFAULT_DISCLAIMER_TEXT,
   },
+  engagementDefaults: defaultEngagementDefaults,
 };
 
 interface TemplateStore {
@@ -79,6 +101,7 @@ interface TemplateStore {
   updateSettings: (updates: Partial<AppSettings>) => void;
   updateDefaultAdvisor: (advisor: Partial<AdvisorInfo>) => void;
   updateDisclaimer: (disclaimer: Partial<DisclaimerSettings>) => void;
+  updateEngagementDefaults: (defaults: Partial<EngagementDefaults>) => void;
 
   // Goal template actions
   updateGoalTemplates: (templates: GoalCategoryTemplate[]) => void;
@@ -188,6 +211,14 @@ export const useTemplateStore = create<TemplateStore>()(
           settings: {
             ...state.settings,
             disclaimer: { ...state.settings.disclaimer, ...disclaimer },
+          },
+        })),
+
+      updateEngagementDefaults: (defaults) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            engagementDefaults: { ...state.settings.engagementDefaults, ...defaults },
           },
         })),
 

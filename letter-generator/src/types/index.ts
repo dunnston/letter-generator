@@ -345,7 +345,7 @@ export const DEFAULT_MITIGATION_STRATEGIES = [
 
 // Step 12: Additional Sections
 export type EngagementTermination = 'ongoing_until_terminated' | 'fixed_term';
-export type PrivacyPolicyDelivery = 'included' | 'enclosed' | 'separate' | 'previously_provided';
+export type PrivacyPolicyDelivery = 'included' | 'enclosed' | 'separate' | 'previously_provided' | 'link';
 
 export interface AdditionalSections {
   clientResponsibilities: string[];
@@ -357,6 +357,7 @@ export interface AdditionalSections {
   includeFollowUpPeriod: boolean;
   terminationFeeLanguage?: string; // e.g., "any unpaid portion of the agreed fee will remain due for work completed to date"
   privacyPolicyDelivery: PrivacyPolicyDelivery;
+  privacyPolicyLink?: string; // URL to privacy policy when delivery method is 'link'
   hasDisciplinaryHistory: boolean;
   disciplinaryDescription?: string;
   hasBankruptcyHistory: boolean;
@@ -377,6 +378,33 @@ export interface AdvisorInfo {
 export interface DisclaimerSettings {
   includeDisclaimer: boolean;
   disclaimerText: string;
+}
+
+// Engagement Letter Defaults (for Settings page)
+export interface EngagementDefaults {
+  // Disclosure toggles
+  includeRIADisclosure: boolean;
+  includeCFPDisclosure: boolean;
+  includeChFCDisclosure: boolean;
+
+  // Primary compensation sources
+  paidFromPlanningFees: boolean;
+  paidFromAdvisoryFees: boolean;
+  paidFromCommissions: boolean;
+  paidFromInsuranceCommissions: boolean;
+
+  // Conflicts - list of default conflict template IDs to auto-add
+  defaultConflictIds: string[];
+  includeMitigations: boolean;
+
+  // Additional sections
+  engagementTermination: EngagementTermination;
+  includeClientResponsibilities: boolean;
+  includeCleanRecord: boolean;
+
+  // Privacy policy
+  defaultPrivacyPolicyDelivery: PrivacyPolicyDelivery;
+  defaultPrivacyPolicyLink: string;
 }
 
 // Default disclaimer text

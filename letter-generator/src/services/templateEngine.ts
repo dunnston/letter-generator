@@ -573,14 +573,24 @@ export function generateTerminationSection(additional: AdditionalSections): stri
 }
 
 export function generatePrivacySection(additional: AdditionalSections): string {
+  const intro = 'My firm has adopted and implemented policies about protecting and sharing your non-public personal information.';
+
+  // Handle link option specially
+  if (additional.privacyPolicyDelivery === 'link' && additional.privacyPolicyLink) {
+    return `${intro} You can view our privacy policy at: ${additional.privacyPolicyLink}`;
+  }
+
   const deliveryText: Record<string, string> = {
-    included: 'A copy of our privacy policy is included with this letter.',
-    enclosed: 'A copy of our privacy policy is enclosed.',
+    included: 'We have included our privacy policy with this letter.',
+    enclosed: 'We have enclosed our privacy policy with this letter.',
     separate: 'Our privacy policy will be provided to you separately.',
-    previously_provided: 'You have previously received a copy of our privacy policy.',
+    previously_provided: 'We have previously given you our privacy policy.',
+    link: 'You can view our privacy policy online.', // Fallback if no link provided
   };
 
-  return deliveryText[additional.privacyPolicyDelivery] || deliveryText.included;
+  const delivery = deliveryText[additional.privacyPolicyDelivery] || deliveryText.included;
+
+  return `${intro} ${delivery}`;
 }
 
 export function generateDisciplinarySection(additional: AdditionalSections): string {

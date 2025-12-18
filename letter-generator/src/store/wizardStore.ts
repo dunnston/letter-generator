@@ -19,8 +19,10 @@ import type {
   ConflictMitigations,
   AdditionalSections,
   AdvisorInfo,
+  EngagementDefaults,
 } from '../types';
 import { DEFAULT_MITIGATION_STRATEGIES } from '../types';
+import { STANDARD_CONFLICTS, createConflictFromTemplate } from '../templates/engagement/conflictTemplates';
 
 // Default values for initialization
 const defaultClientInfo: ClientInfo = {
@@ -195,6 +197,11 @@ interface WizardStore {
   // Full data management
   setData: (data: Partial<EngagementLetterData>) => void;
   resetWizard: () => void;
+  resetWizardWithDefaults: (
+    defaults: EngagementDefaults,
+    advisorDefaults?: Partial<AdvisorInfo>
+  ) => void;
+  applyAdvisorDefaults: (advisor: Partial<AdvisorInfo>) => void;
   markComplete: () => void;
 
   // Computed helpers
@@ -431,6 +438,95 @@ export const useWizardStore = create<WizardStore>()(
           isComplete: false,
           lastSaved: null,
         }),
+
+      resetWizardWithDefaults: (defaults, advisorDefaults) => {
+        // Build conflicts from default conflict IDs
+        const defaultConflicts: ConflictOfInterest[] = [];
+        if (defaults.defaultConflictIds && defaults.defaultConflictIds.length > 0) {
+          defaults.defaultConflictIds.forEach((conflictId) => {
+            const template = STANDARD_CONFLICTS.find((c) => c.id === conflictId);
+            if (template) {
+              defaultConflicts.push(createConflictFromTemplate(template));
+            }
+          });
+        }
+
+        set({
+          currentStep: 1,
+          data: {
+            ...initialWizardData,
+            // Apply disclosure defaults
+            cfpDisclosure: {
+              ...defaultCFPDisclosure,
+              include: defaults.includeCFPDisclosure,
+            },
+            chfcDisclosure: {
+              ...defaultChFCDisclosure,
+              include: defaults.includeChFCDisclosure,
+            },
+            riaDisclosure: {
+              ...defaultRIADisclosure,
+              include: defaults.includeRIADisclosure,
+            },
+            // Apply compensation defaults
+            compensation: {
+              ...defaultCompensation,
+              paidFromPlanningFees: defaults.paidFromPlanningFees,
+              paidFromAdvisoryFees: defaults.paidFromAdvisoryFees,
+              paidFromCommissions: defaults.paidFromCommissions,
+              paidFromInsuranceCommissions: defaults.paidFromInsuranceCommissions,
+            },
+            // Apply conflict defaults
+            conflicts: defaultConflicts,
+            conflictMitigations: {
+              ...defaultConflictMitigations,
+              includeMitigations: defaults.includeMitigations,
+            },
+            // Apply additional section defaults
+            additional: {
+              ...defaultAdditionalSections,
+              engagementTermination: defaults.engagementTermination,
+              includeCleanRecord: defaults.includeCleanRecord,
+              // Pre-populate client responsibilities if enabled
+              clientResponsibilities: defaults.includeClientResponsibilities
+                ? [
+                    'Providing complete and accurate information about your financial situation',
+                    'Reviewing all documents and recommendations carefully',
+                    'Asking questions when you do not understand something',
+                    'Notifying us promptly of any significant changes in your circumstances',
+                    'Making timely decisions on recommendations provided',
+                    'Keeping copies of all documents for your records',
+                  ]
+                : [],
+              // Apply privacy policy defaults
+              privacyPolicyDelivery: defaults.defaultPrivacyPolicyDelivery || 'included',
+              privacyPolicyLink: defaults.defaultPrivacyPolicyLink || '',
+            },
+            // Apply advisor defaults if provided
+            advisor: advisorDefaults
+              ? { ...defaultAdvisor, ...advisorDefaults }
+              : defaultAdvisor,
+          },
+          isComplete: false,
+          lastSaved: null,
+        });
+      },
+
+      applyAdvisorDefaults: (advisor) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            advisor: {
+              ...state.data.advisor,
+              // Only apply defaults to empty fields
+              name: state.data.advisor?.name || advisor.name || '',
+              credentials: state.data.advisor?.credentials || advisor.credentials || '',
+              email: state.data.advisor?.email || advisor.email || '',
+              phone: state.data.advisor?.phone || advisor.phone || '',
+              firmName: state.data.advisor?.firmName || advisor.firmName || '',
+            },
+          },
+        })),
 
       markComplete: () => set({ isComplete: true }),
 
