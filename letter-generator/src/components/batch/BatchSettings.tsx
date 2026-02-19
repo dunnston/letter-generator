@@ -8,6 +8,8 @@ import { Input } from '../common/Input';
 import { Card } from '../common/Card';
 import { Toggle } from '../common/Toggle';
 import { TextArea } from '../common/TextArea';
+import { Button } from '../common/Button';
+import { open } from '@tauri-apps/plugin-dialog';
 import type { BatchSettings, LetterType } from '../../types';
 
 interface BatchSettingsProps {
@@ -74,13 +76,37 @@ export function BatchSettingsPanel({ settings, onChange }: BatchSettingsProps) {
             }
           />
 
-          <Input
-            label="Output Directory"
-            value={settings.outputDirectory}
-            onChange={(e) => onChange({ outputDirectory: e.target.value })}
-            placeholder="Leave blank for default downloads folder"
-            hint="Where generated letters will be saved"
-          />
+          <div>
+            <label className="block text-sm font-medium text-primary-700 mb-1">
+              Output Directory
+            </label>
+            <div className="flex gap-2">
+              <Input
+                value={settings.outputDirectory}
+                onChange={(e) => onChange({ outputDirectory: e.target.value })}
+                placeholder="Leave blank for default downloads folder"
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const selected = await open({
+                    directory: true,
+                    multiple: false,
+                    title: 'Select Output Directory',
+                  });
+                  if (selected) {
+                    onChange({ outputDirectory: selected as string });
+                  }
+                }}
+              >
+                Browse...
+              </Button>
+            </div>
+            <p className="mt-1 text-sm text-primary-500">
+              Where generated letters will be saved
+            </p>
+          </div>
 
           <div>
             <Input
@@ -158,7 +184,7 @@ export function BatchSettingsPanel({ settings, onChange }: BatchSettingsProps) {
           <Toggle
             label="Include Disclaimer"
             checked={settings.includeDisclaimer}
-            onChange={(checked) => onChange({ includeDisclaimer: checked })}
+            onChange={(e) => onChange({ includeDisclaimer: e.target.checked })}
             description="Add a standard disclaimer to each letter"
           />
 

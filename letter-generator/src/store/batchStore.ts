@@ -221,7 +221,9 @@ export const useBatchStore = create<BatchState>()(
             state.settings,
             state.mappingConfig
           );
-          return { currentJob: job };
+          // Validate immediately in the same state update to avoid race condition
+          const validatedJob = validateBatchJob(job);
+          return { currentJob: validatedJob };
         }),
 
       validateJob: () =>
@@ -312,9 +314,14 @@ export const useBatchStore = create<BatchState>()(
 
       // Settings actions
       updateSettings: (updates) =>
-        set((state) => ({
-          settings: { ...state.settings, ...updates },
-        })),
+        set((state) => {
+          // If letterType changes, clear mappingConfig to force re-mapping
+          const shouldClearMapping = updates.letterType && updates.letterType !== state.settings.letterType;
+          return {
+            settings: { ...state.settings, ...updates },
+            ...(shouldClearMapping ? { mappingConfig: null, currentJob: null } : {}),
+          };
+        }),
 
       // History actions
       addToHistory: (result) =>

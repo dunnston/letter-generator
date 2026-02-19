@@ -139,16 +139,15 @@ export function LetterPreview({ data, onEditSection, className = '', disclaimer 
 
   return (
     <div
-      className={`bg-white shadow-lg rounded-lg overflow-hidden ${className}`}
+      className={`bg-white shadow-lg rounded-lg overflow-auto ${className}`}
       style={{
-        // Simulate letter paper proportions
-        aspectRatio: '8.5 / 11',
-        maxHeight: '100%',
+        // Use min dimensions to ensure content is visible
+        minWidth: '500px',
       }}
     >
-      <div className="h-full overflow-y-auto p-8 sm:p-12">
+      <div className="h-full overflow-y-auto p-6 sm:p-8">
         {/* Letter content */}
-        <div className="max-w-[600px] mx-auto space-y-4 font-serif">
+        <div className="max-w-none space-y-4 font-serif">
           {sections
             .filter((s) => !s.isEmpty)
             .map((section) => (

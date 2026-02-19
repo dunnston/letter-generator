@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
 import { Select } from '../common/Select';
-import type { ExcelFile, ExcelSheet } from '../../types';
+import type { ExcelFile } from '../../types';
 import { parseExcelFile } from '../../services/excelParser';
 
 interface FileUploaderProps {

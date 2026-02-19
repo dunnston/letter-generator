@@ -26,6 +26,7 @@ import {
   ReviewGenerateStep,
 } from './components/wizard';
 import { Settings } from './components/Settings';
+import { BatchWizard } from './components/batch/BatchWizard';
 import { useWizardStore } from './store/wizardStore';
 import { useTemplateStore } from './store/templateStore';
 
@@ -117,7 +118,6 @@ function App() {
             label="Batch Letters"
             isActive={currentView === 'batch'}
             onClick={() => setCurrentView('batch')}
-            disabled
           />
           <SidebarNavItem
             icon={<CogIcon />}
@@ -136,6 +136,7 @@ function App() {
           <HomeView
             onStartEngagement={startNewEngagementLetter}
             onResumeEngagement={resumeEngagementLetter}
+            onStartBatch={() => setCurrentView('batch')}
             showResumePrompt={showResumePrompt}
             lastSavedClient={data.client?.firstName ? `${data.client.firstName} ${data.client.lastName}` : undefined}
             lastSavedStep={currentStep}
@@ -147,9 +148,7 @@ function App() {
             <WizardStepRouter step={currentStep} />
           </WizardContainer>
         )}
-        {currentView === 'batch' && (
-          <ComingSoonView title="Batch Letters" />
-        )}
+        {currentView === 'batch' && <BatchWizard />}
         {currentView === 'settings' && <Settings />}
       </MainContent>
     </Layout>
@@ -159,6 +158,7 @@ function App() {
 interface HomeViewProps {
   onStartEngagement: () => void;
   onResumeEngagement: () => void;
+  onStartBatch: () => void;
   showResumePrompt: boolean;
   lastSavedClient?: string;
   lastSavedStep?: number;
@@ -174,6 +174,7 @@ interface HomeViewProps {
 function HomeView({
   onStartEngagement,
   onResumeEngagement,
+  onStartBatch,
   showResumePrompt,
   lastSavedClient,
   lastSavedStep,
@@ -183,7 +184,7 @@ function HomeView({
     <div className="flex-1 p-8 overflow-auto">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-primary-800 mb-2">
-          Federal Letter Generator
+          FP Letter Generator
         </h1>
         <p className="text-lg text-primary-600 mb-8">
           Generate professional engagement letters and client correspondence for financial planning.
@@ -238,17 +239,17 @@ function HomeView({
           </button>
 
           <button
-            disabled
-            className="p-6 bg-white rounded-xl border-2 border-primary-200 opacity-60 cursor-not-allowed text-left"
+            onClick={onStartBatch}
+            className="p-6 bg-white rounded-xl border-2 border-secondary-200 hover:border-secondary-400 hover:shadow-md transition-all text-left group"
           >
-            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-secondary-200 transition-colors">
               <StackIcon />
             </div>
             <h3 className="text-lg font-semibold text-primary-800 mb-2">
               Batch Letters
             </h3>
             <p className="text-sm text-primary-500">
-              Generate multiple letters from Excel data. Coming soon.
+              Generate multiple letters from Excel data (1099, Beneficiary, RMD, Tax Strategies).
             </p>
           </button>
         </div>
@@ -363,21 +364,6 @@ function WizardStepPlaceholder({ stepNumber }: WizardStepPlaceholderProps) {
       <p className="text-sm text-primary-500">
         This step will be implemented in a future phase.
       </p>
-    </div>
-  );
-}
-
-interface ComingSoonViewProps {
-  title: string;
-}
-
-function ComingSoonView({ title }: ComingSoonViewProps) {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold text-primary-700 mb-2">{title}</h2>
-        <p className="text-primary-500">This feature is coming soon.</p>
-      </div>
     </div>
   );
 }

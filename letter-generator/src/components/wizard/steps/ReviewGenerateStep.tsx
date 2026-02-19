@@ -239,9 +239,9 @@ export function ReviewGenerateStep() {
 
   return (
     <WizardStepContent className="!p-0 !bg-transparent !shadow-none !border-none">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-300px)] min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-300px)] min-h-[600px]">
         {/* Left sidebar - Section navigation */}
-        <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-primary-200 p-4 overflow-y-auto">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-primary-200 p-3 overflow-y-auto">
           <h3 className="text-sm font-semibold text-primary-800 mb-3">Sections</h3>
           <SectionNav
             data={letterData}
@@ -264,8 +264,8 @@ export function ReviewGenerateStep() {
         </div>
 
         {/* Center - Letter preview */}
-        <div className="lg:col-span-6 flex flex-col">
-          <div className="bg-primary-100 rounded-xl p-4 flex-1 overflow-hidden">
+        <div className="lg:col-span-8 flex flex-col min-w-0">
+          <div className="bg-primary-100 rounded-xl p-4 flex-1 overflow-auto">
             <LetterPreview
               data={letterData}
               onEditSection={handleEditSection}
@@ -276,12 +276,12 @@ export function ReviewGenerateStep() {
         </div>
 
         {/* Right sidebar - Actions */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-2 space-y-3 overflow-y-auto">
           {/* Export options */}
-          <div className="bg-white rounded-xl shadow-sm border border-primary-200 p-4">
-            <h3 className="text-sm font-semibold text-primary-800 mb-4">Export Options</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-primary-200 p-3">
+            <h3 className="text-xs font-semibold text-primary-800 mb-3">Export Options</h3>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Button
                 className="w-full"
                 onClick={() => handleGenerate('docx')}
@@ -362,9 +362,9 @@ export function ReviewGenerateStep() {
           </div>
 
           {/* Quick info */}
-          <div className="bg-white rounded-xl shadow-sm border border-primary-200 p-4">
-            <h3 className="text-sm font-semibold text-primary-800 mb-3">Letter Summary</h3>
-            <dl className="space-y-2 text-sm">
+          <div className="bg-white rounded-xl shadow-sm border border-primary-200 p-3">
+            <h3 className="text-xs font-semibold text-primary-800 mb-2">Letter Summary</h3>
+            <dl className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <dt className="text-primary-500">Client:</dt>
                 <dd className="font-medium text-primary-800">
@@ -404,9 +404,9 @@ export function ReviewGenerateStep() {
           </div>
 
           {/* Tips */}
-          <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-secondary-800 mb-2">Tips</h4>
-            <ul className="text-xs text-secondary-700 space-y-1">
+          <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-3">
+            <h4 className="text-xs font-medium text-secondary-800 mb-2">Tips</h4>
+            <ul className="text-[11px] text-secondary-700 space-y-1">
               <li>• Hover over sections in the preview to edit</li>
               <li>• Click sections in the sidebar to navigate</li>
               <li>• Review all sections before generating</li>

@@ -5,6 +5,17 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "dialog:default",
+    "fs:default",
+    "fs:allow-write-file",
+    "fs:allow-mkdir",
+    "fs:scope-home",
+    "fs:scope-appcache-recursive",
+    "fs:scope-appdata-recursive",
+    "fs:scope-applocaldata-recursive",
+    "fs:scope-desktop-recursive",
+    "fs:scope-document-recursive",
+    "fs:scope-download-recursive"
   ]
 }
