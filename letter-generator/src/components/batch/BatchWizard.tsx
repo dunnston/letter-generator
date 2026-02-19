@@ -3,7 +3,7 @@
  * Main component that guides users through the batch letter generation process
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
 import { FileUploader } from './FileUploader';
@@ -16,6 +16,16 @@ import {
   applyMappings,
   validateMappings,
 } from '../../services/excelParser';
+import { transformTo1099Data, transformToBeneficiaryData, transformToRMDData, transformToTaxStrategyData } from '../../services/batchProcessor';
+import { generate1099LetterDocx, generate1099Filename } from '../../services/report1099Generator';
+import { generate1099LetterPdf } from '../../services/pdf1099Generator';
+import { generateBeneficiaryLetterDocx, generateBeneficiaryFilename } from '../../services/beneficiaryGenerator';
+import { generateBeneficiaryLetterPdf } from '../../services/pdfBeneficiaryGenerator';
+import { generateRMDLetterDocx, generateRMDFilename } from '../../services/rmdGenerator';
+import { generateRMDLetterPdf } from '../../services/pdfRmdGenerator';
+import { generateTaxStrategyLetterDocx, generateTaxStrategyFilename } from '../../services/taxStrategyGenerator';
+import { generateTaxStrategyLetterPdf } from '../../services/pdfTaxStrategyGenerator';
+import { saveBlobToDirectory } from '../../services/fileService';
 import type { ColumnMappingConfig, ExcelFile } from '../../types';
 
 type WizardStep = 'upload' | 'settings' | 'mapping' | 'review' | 'processing';
@@ -38,7 +48,6 @@ export function BatchWizard() {
     setMappingConfig,
     updateSettings,
     createJob,
-    validateJob,
     startJob,
     pauseJob,
     resumeJob,
@@ -112,8 +121,8 @@ export function BatchWizard() {
               mappingConfig.startRow
             );
             const items = applyMappings(data, mappingConfig);
+            // createJob now includes validation in a single atomic update
             createJob(items);
-            validateJob();
             setCurrentStep('review');
           } catch (error) {
             console.error('Failed to create batch job:', error);
@@ -127,7 +136,7 @@ export function BatchWizard() {
         processNextItem();
         break;
     }
-  }, [currentStep, rawData, excelFile, mappingConfig, createJob, validateJob, startJob]);
+  }, [currentStep, rawData, excelFile, mappingConfig, createJob, startJob]);
 
   // Handle back
   const handleBack = useCallback(() => {
@@ -145,43 +154,231 @@ export function BatchWizard() {
     }
   }, [currentStep, clearCurrentJob]);
 
-  // Process items (placeholder - will be replaced with actual document generation)
-  const processNextItem = useCallback(() => {
+  // Track which clients have already been processed (for grouping)
+  const processedClientsRef = useRef<Set<string>>(new Set());
+
+  // Reset processed clients when job changes
+  useEffect(() => {
+    if (currentJob?.status === 'idle') {
+      processedClientsRef.current = new Set();
+    }
+  }, [currentJob?.status]);
+
+  // Process items with real document generation
+  const processNextItem = useCallback(async () => {
     if (!currentJob || currentJob.status !== 'running') return;
 
-    const pendingItem = currentJob.items.find((i) => i.status === 'pending');
-    if (!pendingItem) {
+    // Find pending items
+    const pendingItems = currentJob.items.filter((i) => i.status === 'pending');
+    if (pendingItems.length === 0) {
       completeJob();
       return;
     }
 
-    // Mark as processing
-    updateItemInJob(pendingItem.id, 'processing');
+    // Get grouping key based on letter type
+    // 1099 and tax_strategies letters group by clientName, beneficiary and RMD letters group by accountOwner
+    const firstPending = pendingItems[0];
+    const groupKey = (settings.letterType === 'beneficiary' || settings.letterType === 'rmd')
+      ? String(firstPending.data.accountOwner || '')
+      : String(firstPending.data.clientName || '');
 
-    // Simulate processing delay
-    setTimeout(() => {
-      // Simulate success/failure (90% success rate for demo)
-      const success = Math.random() > 0.1;
+    // Skip if this group was already processed
+    if (processedClientsRef.current.has(groupKey)) {
+      // Mark this item as skipped (already included in another letter)
+      updateItemInJob(firstPending.id, 'success', undefined, 'Included in client letter');
+      // Continue to next item
+      setTimeout(() => processNextItem(), 10);
+      return;
+    }
 
-      if (success) {
-        updateItemInJob(
-          pendingItem.id,
-          'success',
-          undefined,
-          `/output/${pendingItem.id}.docx`
-        );
+    // Find all items for this group
+    const groupField = (settings.letterType === 'beneficiary' || settings.letterType === 'rmd') ? 'accountOwner' : 'clientName';
+    const groupItems = currentJob.items.filter(
+      (i) => String(i.data[groupField] || '') === groupKey && i.status === 'pending'
+    );
+
+    // Mark all items for this group as processing
+    groupItems.forEach((item) => {
+      updateItemInJob(item.id, 'processing');
+    });
+
+    try {
+      if (settings.letterType === '1099') {
+        // Transform items to 1099 data
+        const clientDataMap = transformTo1099Data(groupItems, settings);
+        const clientData = clientDataMap.get(groupKey);
+
+        if (!clientData) {
+          throw new Error('Failed to transform data for client');
+        }
+
+        // Generate documents based on output format
+        if (settings.outputFormat === 'docx' || settings.outputFormat === 'both') {
+          const docxBlob = await generate1099LetterDocx(clientData, settings);
+          const filename = generate1099Filename(groupKey, settings.taxYear, 'docx');
+          await saveBlobToDirectory(docxBlob, filename, settings.outputDirectory);
+        }
+
+        if (settings.outputFormat === 'pdf' || settings.outputFormat === 'both') {
+          const pdfBlob = await generate1099LetterPdf(clientData, settings);
+          const filename = generate1099Filename(groupKey, settings.taxYear, 'pdf');
+          await saveBlobToDirectory(pdfBlob, filename, settings.outputDirectory);
+        }
+
+        // Mark all items for this client as success
+        const outputFilename = generate1099Filename(groupKey, settings.taxYear,
+          settings.outputFormat === 'both' ? 'docx' : settings.outputFormat);
+        groupItems.forEach((item) => {
+          updateItemInJob(item.id, 'success', undefined, outputFilename);
+        });
+
+        // Mark this group as processed
+        processedClientsRef.current.add(groupKey);
+
+      } else if (settings.letterType === 'beneficiary') {
+        // Transform items to beneficiary data
+        const ownerDataMap = transformToBeneficiaryData(groupItems, settings);
+        const accounts = ownerDataMap.get(groupKey);
+
+        if (!accounts || accounts.length === 0) {
+          throw new Error('Failed to transform data for account owner');
+        }
+
+        // Create letter data structure
+        const letterData = {
+          accountOwner: groupKey,
+          accounts: accounts,
+          firmName: settings.firmName,
+          assistantName: settings.assistantName,
+          contactEmail: settings.contactEmail,
+        };
+
+        // Generate documents based on output format
+        if (settings.outputFormat === 'docx' || settings.outputFormat === 'both') {
+          const docxBlob = await generateBeneficiaryLetterDocx(letterData, settings);
+          const filename = generateBeneficiaryFilename(groupKey, 'docx');
+          await saveBlobToDirectory(docxBlob, filename, settings.outputDirectory);
+        }
+
+        if (settings.outputFormat === 'pdf' || settings.outputFormat === 'both') {
+          const pdfBlob = await generateBeneficiaryLetterPdf(letterData, settings);
+          const filename = generateBeneficiaryFilename(groupKey, 'pdf');
+          await saveBlobToDirectory(pdfBlob, filename, settings.outputDirectory);
+        }
+
+        // Mark all items for this account owner as success
+        const outputFilename = generateBeneficiaryFilename(groupKey,
+          settings.outputFormat === 'both' ? 'docx' : settings.outputFormat);
+        groupItems.forEach((item) => {
+          updateItemInJob(item.id, 'success', undefined, outputFilename);
+        });
+
+        // Mark this group as processed
+        processedClientsRef.current.add(groupKey);
+
+      } else if (settings.letterType === 'rmd') {
+        // Transform items to RMD data
+        const ownerDataMap = transformToRMDData(groupItems, settings);
+        const rmdData = ownerDataMap.get(groupKey);
+
+        if (!rmdData) {
+          throw new Error('Failed to transform data for account owner');
+        }
+
+        // Create letter data structure
+        const letterData = {
+          accountOwner: groupKey,
+          taxYear: rmdData.taxYear,
+          accounts: rmdData.accounts,
+          totalRMDDue: rmdData.totalRMDDue,
+          totalWithdrawals: rmdData.totalWithdrawals,
+          remainingRMD: rmdData.remainingRMD,
+          recommendations: rmdData.recommendations,
+          firmName: settings.firmName,
+          assistantName: rmdData.assistantName || settings.assistantName,
+          contactEmail: settings.contactEmail,
+        };
+
+        // Generate documents based on output format
+        if (settings.outputFormat === 'docx' || settings.outputFormat === 'both') {
+          const docxBlob = await generateRMDLetterDocx(letterData, settings);
+          const filename = generateRMDFilename(groupKey, settings.taxYear, 'docx');
+          await saveBlobToDirectory(docxBlob, filename, settings.outputDirectory);
+        }
+
+        if (settings.outputFormat === 'pdf' || settings.outputFormat === 'both') {
+          const pdfBlob = await generateRMDLetterPdf(letterData, settings);
+          const filename = generateRMDFilename(groupKey, settings.taxYear, 'pdf');
+          await saveBlobToDirectory(pdfBlob, filename, settings.outputDirectory);
+        }
+
+        // Mark all items for this account owner as success
+        const outputFilename = generateRMDFilename(groupKey, settings.taxYear,
+          settings.outputFormat === 'both' ? 'docx' : settings.outputFormat);
+        groupItems.forEach((item) => {
+          updateItemInJob(item.id, 'success', undefined, outputFilename);
+        });
+
+        // Mark this group as processed
+        processedClientsRef.current.add(groupKey);
+
+      } else if (settings.letterType === 'tax_strategies') {
+        // Transform items to tax strategy data
+        const clientDataMap = transformToTaxStrategyData(groupItems, settings);
+        const taxData = clientDataMap.get(groupKey);
+
+        if (!taxData) {
+          throw new Error('Failed to transform data for client');
+        }
+
+        // Create letter data structure
+        const letterData = {
+          ...taxData,
+          firmName: settings.firmName,
+          advisorName: settings.assistantName,
+          contactEmail: settings.contactEmail,
+        };
+
+        // Generate documents based on output format
+        if (settings.outputFormat === 'docx' || settings.outputFormat === 'both') {
+          const docxBlob = await generateTaxStrategyLetterDocx(letterData, settings);
+          const filename = generateTaxStrategyFilename(groupKey, settings.taxYear, 'docx');
+          await saveBlobToDirectory(docxBlob, filename, settings.outputDirectory);
+        }
+
+        if (settings.outputFormat === 'pdf' || settings.outputFormat === 'both') {
+          const pdfBlob = await generateTaxStrategyLetterPdf(letterData, settings);
+          const filename = generateTaxStrategyFilename(groupKey, settings.taxYear, 'pdf');
+          await saveBlobToDirectory(pdfBlob, filename, settings.outputDirectory);
+        }
+
+        // Mark all items for this client as success
+        const outputFilename = generateTaxStrategyFilename(groupKey, settings.taxYear,
+          settings.outputFormat === 'both' ? 'docx' : settings.outputFormat);
+        groupItems.forEach((item) => {
+          updateItemInJob(item.id, 'success', undefined, outputFilename);
+        });
+
+        // Mark this group as processed
+        processedClientsRef.current.add(groupKey);
+
       } else {
-        updateItemInJob(
-          pendingItem.id,
-          'error',
-          'Simulated error for demonstration'
-        );
+        // Other letter types not yet implemented
+        groupItems.forEach((item) => {
+          updateItemInJob(item.id, 'error', `Letter type '${settings.letterType}' not yet implemented`);
+        });
       }
+    } catch (error) {
+      // Mark all items for this group as error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error generating document';
+      groupItems.forEach((item) => {
+        updateItemInJob(item.id, 'error', errorMessage);
+      });
+    }
 
-      // Process next item
-      processNextItem();
-    }, 200);
-  }, [currentJob, updateItemInJob, completeJob]);
+    // Small delay before processing next group
+    setTimeout(() => processNextItem(), 100);
+  }, [currentJob, settings, updateItemInJob, completeJob]);
 
   // Resume processing when job state changes to running
   useEffect(() => {
@@ -197,6 +394,7 @@ export function BatchWizard() {
   const handleReset = () => {
     clearImport();
     clearCurrentJob();
+    processedClientsRef.current = new Set(); // Clear processed clients tracking
     setCurrentStep('upload');
     setMappingValidation({ valid: false, missingFields: [] });
   };
@@ -252,6 +450,7 @@ export function BatchWizard() {
                 Step 3: Map Columns
               </h2>
               <ColumnMapper
+                key={`${excelFile?.fileName}-${selectedSheet.name}-${settings.letterType}`}
                 columns={selectedSheet.columns}
                 letterType={settings.letterType}
                 initialMappings={mappingConfig?.mappings}

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Federal Letter Generator",
+  "productName": "FP Letter Generator",
   "version": "0.1.0",
-  "identifier": "com.federal-letter-generator.app",
+  "identifier": "com.fp-letter-generator.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Federal Letter Generator",
+        "title": "FP Letter Generator",
         "width": 1200,
         "height": 800,
         "minWidth": 900,

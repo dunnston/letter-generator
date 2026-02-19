@@ -14,10 +14,6 @@ import type {
   BatchItem,
   LetterType,
   FieldDefinition,
-  FIELD_DEFINITIONS_1099,
-  FIELD_DEFINITIONS_BENEFICIARY,
-  FIELD_DEFINITIONS_RMD,
-  FIELD_DEFINITIONS_TAX_STRATEGIES,
 } from '../types';
 
 // Re-import field definitions for use in this file

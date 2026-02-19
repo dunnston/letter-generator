@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    federal_letter_generator_lib::run()
+    fp_letter_generator_lib::run()
 }

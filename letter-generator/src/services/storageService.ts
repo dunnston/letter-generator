@@ -96,7 +96,7 @@ async function getTauriApis(): Promise<{ fs: TauriFS; path: TauriPath } | null> 
 
 // ==================== BROWSER STORAGE FALLBACK ====================
 
-const STORAGE_PREFIX = 'federal-letter-generator:';
+const STORAGE_PREFIX = 'fp-letter-generator:';
 
 function browserStorageGet<T>(key: string): T | null {
   try {

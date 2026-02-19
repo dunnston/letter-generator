@@ -29,45 +29,30 @@ export interface SaveResult {
 
 declare global {
   interface Window {
-    __TAURI__?: {
-      dialog: {
-        save: (options: {
-          defaultPath?: string;
-          filters?: Array<{ name: string; extensions: string[] }>;
-        }) => Promise<string | null>;
-      };
-      fs: {
-        writeBinaryFile: (path: string, data: Uint8Array) => Promise<void>;
-        writeTextFile: (path: string, data: string) => Promise<void>;
-      };
-      path: {
-        documentDir: () => Promise<string>;
-        join: (...paths: string[]) => Promise<string>;
-      };
-    };
+    __TAURI_INTERNALS__?: unknown;
+    __TAURI__?: unknown;
   }
 }
 
 function isTauri(): boolean {
-  return typeof window !== 'undefined' && !!window.__TAURI__;
+  // Tauri 2.x uses __TAURI_INTERNALS__, Tauri 1.x uses __TAURI__
+  return typeof window !== 'undefined' && (!!window.__TAURI_INTERNALS__ || !!window.__TAURI__);
 }
 
 // ==================== TAURI FILE OPERATIONS ====================
 
 async function saveFileTauri(options: SaveFileOptions): Promise<SaveResult> {
-  if (!window.__TAURI__) {
-    return { success: false, error: 'Tauri not available' };
-  }
-
   try {
-    const { dialog, fs, path } = window.__TAURI__;
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const { writeFile } = await import('@tauri-apps/plugin-fs');
+    const { documentDir, join } = await import('@tauri-apps/api/path');
 
     // Get documents directory as default location
-    const documentsDir = await path.documentDir();
-    const defaultPath = await path.join(documentsDir, options.filename);
+    const docsDir = await documentDir();
+    const defaultPath = await join(docsDir, options.filename);
 
     // Show save dialog
-    const filePath = await dialog.save({
+    const filePath = await save({
       defaultPath,
       filters: options.filters,
     });
@@ -89,7 +74,7 @@ async function saveFileTauri(options: SaveFileOptions): Promise<SaveResult> {
     }
 
     // Write file
-    await fs.writeBinaryFile(filePath, dataArray);
+    await writeFile(filePath, dataArray);
 
     return { success: true, filePath };
   } catch (error) {
@@ -202,6 +187,58 @@ export function downloadBlob(blob: Blob, filename: string): void {
     URL.revokeObjectURL(url);
     console.log('Download cleanup complete');
   }, 100);
+}
+
+/**
+ * Save a blob to a specific directory using Tauri's fs plugin
+ * Falls back to browser download if no output directory specified or if not in Tauri
+ */
+export async function saveBlobToDirectory(
+  blob: Blob,
+  filename: string,
+  outputDirectory?: string
+): Promise<void> {
+  console.log('saveBlobToDirectory called:', { filename, outputDirectory, blobSize: blob.size, isTauriEnv: isTauri() });
+
+  // If no output directory, use browser download
+  if (!outputDirectory) {
+    console.log('No output directory specified, using browser download');
+    downloadBlob(blob, filename);
+    return;
+  }
+
+  // Try to use Tauri's fs plugin
+  if (isTauri()) {
+    try {
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+
+      // Convert blob to Uint8Array
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Construct full path - ensure proper path separator and no double separators
+      let fullPath = outputDirectory;
+      if (!fullPath.endsWith('/') && !fullPath.endsWith('\\')) {
+        fullPath += outputDirectory.includes('/') ? '/' : '\\';
+      }
+      fullPath += filename;
+
+      console.log('Attempting to save file to:', fullPath, 'Size:', uint8Array.length);
+
+      await writeFile(fullPath, uint8Array);
+      console.log('File saved successfully:', fullPath);
+    } catch (error) {
+      console.error('Failed to save file with Tauri fs:', error);
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      // Fall back to browser download
+      console.log('Falling back to browser download');
+      downloadBlob(blob, filename);
+    }
+  } else {
+    // Not in Tauri, use browser download
+    console.log('Not in Tauri environment, using browser download');
+    downloadBlob(blob, filename);
+  }
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
